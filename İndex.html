@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OtoPazarı Online - Çok Oyunculu Galeri Simülatörü</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDKs (Compat sürümleri) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1f2937; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-100 font-sans min-h-screen flex flex-col justify-between select-none">
+
+    <!-- Üst Bar / Profil & Ekonomi -->
+    <header class="bg-gray-900 border-b border-gray-800 p-4 sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-car-side text-3xl text-red-500"></i>
+                <div>
+                    <h1 class="font-extrabold text-xl tracking-wider bg-gradient-to-r from-red-500 to-orange-400 bg-clip-text text-transparent">OTOPAZARI ONLINE</h1>
+                    <span id="company-display" class="text-xs text-gray-400">Şirket: Yükleniyor...</span>
+                </div>
+            </div>
+
+            <!-- Oyuncu İstatistikleri -->
+            <div class="flex items-center space-x-6 bg-gray-800/60 px-4 py-2 rounded-xl border border-gray-700">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-wallet text-green-400"></i>
+                    <div>
+                        <div class="text-xs text-gray-400">Nakit Bakiye</div>
+                        <div id="player-money" class="font-bold text-green-400">$0</div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-star text-yellow-400"></i>
+                    <div>
+                        <div class="text-xs text-gray-400">İtibar</div>
+                        <div id="player-rep" class="font-bold text-yellow-400">100 İP</div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-warehouse text-blue-400"></i>
+                    <div>
+                        <div class="text-xs text-gray-400">Garaj Kapasitesi</div>
+                        <div id="garage-capacity" class="font-bold text-blue-400">0/5</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Profil Ayarları Butonu -->
+            <button onclick="toggleModal('profile-modal')" class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-2 rounded-lg text-sm border border-gray-700 transition">
+                <i class="fa-solid fa-gear mr-1"></i> Ayarlar & Profil
+            </button>
+        </div>
+    </header>
+
+    <!-- Ana İçerik Alanı -->
+    <main class="max-w-7xl mx-auto p-4 w-full flex-grow grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        <!-- Sol Navigasyon Menüsü -->
+        <aside class="lg:col-span-1 space-y-2">
+            <button onclick="switchTab('showroom')" class="tab-btn w-full text-left p-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-red-500/50 flex items-center justify-between transition">
+                <span><i class="fa-solid fa-store text-red-400 mr-2"></i> Sıfır Galeri</span>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-500"></i>
+            </button>
+            <button onclick="switchTab('secondhand')" class="tab-btn w-full text-left p-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-orange-500/50 flex items-center justify-between transition">
+                <span><i class="fa-solid fa-handshake text-orange-400 mr-2"></i> Canlı Pazarlık & İkinci El</span>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-500"></i>
+            </button>
+            <button onclick="switchTab('my-garage')" class="tab-btn w-full text-left p-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-blue-500/50 flex items-center justify-between transition">
+                <span><i class="fa-solid fa-car text-blue-400 mr-2"></i> Garajım & Modifiye</span>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-500"></i>
+            </button>
+            <button onclick="switchTab('auction')" class="tab-btn w-full text-left p-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-yellow-500/50 flex items-center justify-between transition">
+                <span><i class="fa-solid fa-gavel text-yellow-400 mr-2"></i> Canlı Açık Artırma</span>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-500"></i>
+            </button>
+            <button onclick="switchTab('bank')" class="tab-btn w-full text-left p-3 rounded-xl bg-gray-900 border border-gray-800 hover:border-green-500/50 flex items-center justify-between transition">
+                <span><i class="fa-solid fa-building-columns text-green-400 mr-2"></i> Banka & Kredi</span>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-500"></i>
+            </button>
+            
+            <!-- Canlı Sohbet Kutusu -->
+            <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 mt-4 flex flex-col h-64">
+                <h3 class="text-xs font-bold text-gray-400 mb-2 flex items-center">
+                    <i class="fa-solid fa-comments text-red-400 mr-2"></i> Galericiler Chat
+                </h3>
+                <div id="chat-messages" class="flex-grow overflow-y-auto space-y-2 text-xs custom-scrollbar pr-1 mb-2">
+                    <div class="text-gray-500 italic">Sohbet yükleniyor...</div>
+                </div>
+                <div class="flex gap-1">
+                    <input type="text" id="chat-input" placeholder="Mesaj yaz..." class="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs w-full focus:outline-none focus:border-red-500">
+                    <button onclick="sendChatMessage()" class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg text-xs font-bold transition"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Orta İçerik Alanı -->
+        <section class="lg:col-span-3">
+
+            <!-- TAB 1: Sıfır Araç Galerisi -->
+            <div id="tab-showroom" class="tab-content space-y-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-store text-red-500"></i> Sıfır Araç Galerisi
+                </h2>
+                <div id="showroom-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dinamik Araç Kartları -->
+                </div>
+            </div>
+
+            <!-- TAB 2: Canlı İkinci El Pazarı -->
+            <div id="tab-secondhand" class="tab-content hidden space-y-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-handshake text-orange-500"></i> Oyuncu İlanları & Canlı Pazar
+                </h2>
+                <div id="market-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Dinamik İkinci El İlanları -->
+                </div>
+            </div>
+
+            <!-- TAB 3: Garajım & Modifiye -->
+            <div id="tab-my-garage" class="tab-content hidden space-y-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-car text-blue-500"></i> Garajım & Sanayi Servisi
+                </h2>
+                <div id="my-garage-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Sahip Olunan Araçlar -->
+                </div>
+            </div>
+
+            <!-- TAB 4: Açık Artırma -->
+            <div id="tab-auction" class="tab-content hidden space-y-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-gavel text-yellow-500"></i> Canlı İhale & Açık Artırma Salonu
+                </h2>
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 text-center space-y-4">
+                    <i class="fa-solid fa-stopwatch text-4xl text-yellow-500 animate-pulse"></i>
+                    <h3 class="text-lg font-bold">Günün İhale Aracı</h3>
+                    <div id="auction-car-details" class="text-sm text-gray-400">Yükleniyor...</div>
+                    <div class="text-2xl font-black text-green-400" id="auction-current-bid">$0</div>
+                    <div class="flex justify-center gap-2">
+                        <button onclick="placeBid(1000)" class="bg-yellow-600 hover:bg-yellow-500 px-4 py-2 rounded-lg font-bold text-sm">+$1,000 Teklif Ver</button>
+                        <button onclick="placeBid(5000)" class="bg-yellow-600 hover:bg-yellow-500 px-4 py-2 rounded-lg font-bold text-sm">+$5,000 Teklif Ver</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: Banka -->
+            <div id="tab-bank" class="tab-content hidden space-y-4">
+                <h2 class="text-xl font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-building-columns text-green-500"></i> Merkez Bankası & Finans
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 space-y-3">
+                        <h3 class="font-bold text-green-400"><i class="fa-solid fa-hand-holding-dollar mr-2"></i> Hızlı Kredi Çek</h3>
+                        <p class="text-xs text-gray-400">Şirket büyümesini hızlandırmak için bankadan %10 faizle kredi alabilirsin.</p>
+                        <button onclick="takeLoan(10000)" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded-lg font-bold text-sm transition">$10,000 Kredi Çek</button>
+                        <button onclick="takeLoan(50000)" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded-lg font-bold text-sm transition">$50,000 Kredi Çek</button>
+                    </div>
+                    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 space-y-3">
+                        <h3 class="font-bold text-red-400"><i class="fa-solid fa-file-invoice-dollar mr-2"></i> Borç Ödeme</h3>
+                        <div class="text-xs text-gray-400">Toplam Borç: <span id="bank-debt" class="text-red-400 font-bold">$0</span></div>
+                        <button onclick="payDebt()" class="w-full bg-red-600 hover:bg-red-700 py-2 rounded-lg font-bold text-sm transition">Borcumu Öde</button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Profil Ayarları Modalı -->
+    <div id="profile-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-900 border border-gray-800 rounded-2xl max-w-md w-full p-6 space-y-4">
+            <h2 class="text-lg font-bold flex items-center justify-between">
+                <span><i class="fa-solid fa-user-gear text-red-500 mr-2"></i> Profil & Şirket Ayarları</span>
+                <button onclick="toggleModal('profile-modal')" class="text-gray-500 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">Oyuncu Adı</label>
+                    <input type="text" id="input-player-name" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm focus:outline-none focus:border-red-500">
+                </div>
+                <div>
+                    <label class="text-xs text-gray-400 block mb-1">Galeri / Şirket Adı</label>
+                    <input type="text" id="input-company-name" class="w-full bg-gray-800 border border-gray-700 rounded-lg p-2 text-sm focus:outline-none focus:border-red-500">
+                </div>
+            </div>
+            <button onclick="saveProfile()" class="w-full bg-red-600 hover:bg-red-700 font-bold py-2 rounded-lg text-sm transition">Kaydet ve Güncelle</button>
+        </div>
+    </div>
+
+    <!-- Script Kodları (Senin Firebase Bilgilerinle Entegre Edildi) -->
+    <script>
+        // SENİN FIREBASE BAĞLANTI BİLGİLERİN
+        const firebaseConfig = {
+            apiKey: "AIzaSyCJ7JBTnizLPbsbBugRIfUaKWDpP350s_I",
+            authDomain: "sohbet-uygulamasi-35fd4.firebaseapp.com",
+            databaseURL: "https://sohbet-uygulamasi-35fd4-default-rtdb.firebaseio.com",
+            projectId: "sohbet-uygulamasi-35fd4",
+            storageBucket: "sohbet-uygulamasi-35fd4.firebasestorage.app",
+            messagingSenderId: "185312776236",
+            appId: "1:185312776236:web:0d394626a958e4bc8f4189",
+            measurementId: "G-HKXZ646QCN"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // Oyuncu Durumu (State)
+        let player = {
+            id: 'user_' + Math.random().toString(36).substr(2, 9),
+            name: 'Galerici_' + Math.floor(Math.random() * 1000),
+            company: 'Pazarlık Otomotiv',
+            money: 35000,
+            reputation: 100,
+            debt: 0,
+            garage: []
+        };
+
+        // Sabit Sıfır Araç Veritabanı
+        const showroomCars = [
+            { id: 'c1', name: 'Hatchback Eco', price: 12000, hp: 90, type: 'Ekonomik', img: 'fa-car' },
+            { id: 'c2', name: 'Sedan Comfort', price: 25000, hp: 130, type: 'Sedan', img: 'fa-car-side' },
+            { id: 'c3', name: 'SUV Offroad 4x4', price: 48000, hp: 210, type: 'SUV', img: 'fa-truck-monster' },
+            { id: 'c4', name: 'Hyper Sport V8', price: 120000, hp: 550, type: 'Spor', img: 'fa-car-burst' }
+        ];
+
+        // Sayfa Yüklendiğinde
+        window.onload = function() {
+            renderShowroom();
+            updateUI();
+            listenChat();
+            listenMarket();
+        };
+
+        function updateUI() {
+            document.getElementById('player-money').innerText = '$' + player.money.toLocaleString();
+            document.getElementById('player-rep').innerText = player.reputation + ' İP';
+            document.getElementById('company-display').innerText = 'Şirket: ' + player.company + ' (' + player.name + ')';
+            document.getElementById('garage-capacity').innerText = player.garage.length + '/5';
+            document.getElementById('bank-debt').innerText = '$' + player.debt.toLocaleString();
+            
+            document.getElementById('input-player-name').value = player.name;
+            document.getElementById('input-company-name').value = player.company;
+            renderGarage();
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+        }
+
+        function toggleModal(modalId) {
+            document.getElementById(modalId).classList.toggle('hidden');
+        }
+
+        function saveProfile() {
+            player.name = document.getElementById('input-player-name').value || player.name;
+            player.company = document.getElementById('input-company-name').value || player.company;
+            updateUI();
+            toggleModal('profile-modal');
+        }
+
+        function renderShowroom() {
+            const container = document.getElementById('showroom-list');
+            container.innerHTML = showroomCars.map(car => `
+                <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl space-y-3 hover:border-red-500/40 transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold text-lg">${car.name}</h3>
+                            <span class="text-xs bg-gray-800 px-2 py-0.5 rounded text-gray-400">${car.type}</span>
+                        </div>
+                        <i class="fa-solid ${car.img} text-3xl text-gray-700"></i>
+                    </div>
+                    <div class="text-xs text-gray-400">Motor Gücü: <b class="text-gray-200">${car.hp} HP</b></div>
+                    <div class="flex justify-between items-center pt-2 border-t border-gray-800">
+                        <span class="font-extrabold text-green-400 text-lg">$${car.price.toLocaleString()}</span>
+                        <button onclick="buyShowroomCar('${car.id}')" class="bg-red-600 hover:bg-red-700 px-3 py-1.5 rounded-lg text-xs font-bold transition">Satın Al</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function buyShowroomCar(carId) {
+            if (player.garage.length >= 5) return alert("Garajın dolu! (Maks: 5)");
+            const car = showroomCars.find(c => c.id === carId);
+            if (player.money >= car.price) {
+                player.money -= car.price;
+                player.garage.push({
+                    ...car,
+                    instanceId: 'mycar_' + Math.random().toString(36).substr(2, 5),
+                    km: 0,
+                    condition: 100
+                });
+                updateUI();
+                alert(`${car.name} başarıyla satın alındı! Garajından kontrol edebilirsin.`);
+            } else {
+                alert("Yetersiz bakiye!");
+            }
+        }
+
+        function renderGarage() {
+            const container = document.getElementById('my-garage-list');
+            if (player.garage.length === 0) {
+                container.innerHTML = `<div class="col-span-2 text-center text-gray-500 py-8">Garajınızda henüz araç yok. Sıfır galeriden araç alabilirsiniz.</div>`;
+                return;
+            }
+            container.innerHTML = player.garage.map(car => `
+                <div class="bg-gray-900 border border-gray-800 p-4 rounded-xl space-y-3">
+                    <div class="flex justify-between items-start">
+                        <h3 class="font-bold text-lg">${car.name}</h3>
+                        <span class="text-xs text-green-400 font-bold">%${car.condition} Durum</span>
+                    </div>
+                    <div class="text-xs text-gray-400">Güç: ${car.hp} HP | KM: ${car.km}</div>
+                    <div class="flex gap-2 pt-2 border-t border-gray-800">
+                        <button onclick="tuneCar('${car.instanceId}')" class="w-1/2 bg-blue-600 hover:bg-blue-700 py-1.5 rounded-lg text-xs font-bold transition">Software +30 HP ($2,000)</button>
+                        <button onclick="sellToMarket('${car.instanceId}')" class="w-1/2 bg-orange-600 hover:bg-orange-700 py-1.5 rounded-lg text-xs font-bold transition">İlana Koy</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function tuneCar(instanceId) {
+            const car = player.garage.find(c => c.instanceId === instanceId);
+            if (player.money >= 2000) {
+                player.money -= 2000;
+                car.hp += 30;
+                updateUI();
+                alert(`${car.name} yazılım atıldı! Yeni Güç: ${car.hp} HP`);
+            } else {
+                alert("Yetersiz bakiye!");
+            }
+        }
+
+        function sellToMarket(instanceId) {
+            const carIndex = player.garage.findIndex(c => c.instanceId === instanceId);
+            const car = player.garage[carIndex];
+            const 
